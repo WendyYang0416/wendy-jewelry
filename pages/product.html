@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Product Details — Wendy Jewelry</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../assets/css/style.css" />
+</head>
+<body data-page="detail">
+
+<div id="siteHeader"></div>
+
+<section class="product-detail">
+  <div class="container">
+    <a href="products.html" class="back-link" data-i18n="detail.back">← Back to Products</a>
+    <div id="detailContent">
+      <div class="empty-state">Loading...</div>
+    </div>
+  </div>
+</section>
+
+<div id="siteFooter"></div>
+
+<script src="../assets/js/app.js"></script>
+<script>
+  let activeColorIdx = 0;
+
+  function getURLParam(k) { return (new URLSearchParams(window.location.search)).get(k) || ''; }
+
+  function renderDetail() {
+    const WJ = window.WJ;
+    const id = getURLParam('id');
+    const p = WJ.getProductById(id);
+    const wrap = document.getElementById('detailContent');
+
+    if (!p || !p.active) {
+      wrap.innerHTML = `
+        <div class="empty-state" style="padding:80px 20px;">
+          <h3>Product not found</h3>
+          <p><a href="products.html" class="btn btn-primary" style="margin-top:10px;">${WJ.t('nav.allProducts')}</a></p>
+        </div>`;
+      return;
+    }
+
+    const colors = p.colors || [];
+    if (activeColorIdx >= colors.length) activeColorIdx = 0;
+
+    const allImages = [p.image].concat(colors.map(c => c.image));
+    const currentImg = colors.length ? colors[activeColorIdx].image : p.image;
+
+    const inquiryText = encodeURIComponent(
+      `Hi Wendy, I'm interested in your product:\n\n` +
+      `Name: ${p.name}\n` +
+      `Category: ${p.category}\n` +
+      `Material: ${p.material}\n` +
+      `Weight: ${p.weight}g\n` +
+      (colors.length ? `Color: ${colors[activeColorIdx].name}\n` : '') +
+      `Please send me a quote with MOQ and shipping options.`
+    );
+
+    wrap.innerHTML = `
+      <div class="detail-grid">
+        <div class="detail-gallery">
+          <div class="main-image">
+            <img id="mainImg" src="${currentImg}" alt="${WJ.getLocalized(p, 'name')}" />
+          </div>
+          <div class="gallery-thumbs">
+            <div class="thumb ${activeColorIdx === -1 ? 'active' : ''}" data-img="${p.image}">
+              <img src="${p.image}" alt="Main" />
+            </div>
+            ${colors.map((c, i) => `
+              <div class="thumb ${i === activeColorIdx ? 'active' : ''}" data-idx="${i}" data-img="${c.image}">
+                <img src="${c.image}" alt="${c.name}" />
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        <div class="detail-info">
+          <span class="breadcrumb-cat">${WJ.t('nav.' + p.category)}</span>
+          <h1>${WJ.getLocalized(p, 'name')}</h1>
+          ${p.price ? `<div style="font-size:24px;font-weight:700;color:var(--primary-dark);margin:8px 0;">$${p.price.toFixed(2)} <small style="color:var(--text-soft);font-weight:400;font-size:14px;">/ piece (reference)</small></div>` : ''}
+
+          <table class="spec-table">
+            <tr>
+              <td data-i18n="detail.material">${WJ.t('detail.material')}</td>
+              <td><strong>${WJ.getLocalized(p, 'material')}</strong></td>
+            </tr>
+            <tr>
+              <td data-i18n="detail.weight">${WJ.t('detail.weight')}</td>
+              <td><strong>${p.weight} g</strong> <small style="color:var(--text-soft)">— perfect for container weight/volume mix optimization</small></td>
+            </tr>
+          </table>
+
+          <div>
+            <strong style="display:block;margin-bottom:6px;" data-i18n="detail.colors">${WJ.t('detail.colors')}</strong>
+            <div class="color-swatches-row">
+              ${colors.length ? colors.map((c, i) => `
+                <div class="color-swatch ${i === activeColorIdx ? 'active' : ''}" data-color-idx="${i}">
+                  <div class="swatch-img"><img src="${c.image}" alt="${c.name}" /></div>
+                  <span class="swatch-name">${c.name}</span>
+                </div>
+              `).join('') : `<div style="color:var(--text-soft);font-size:14px;">Standard color</div>`}
+            </div>
+          </div>
+
+          <div class="detail-desc">
+            <h3 data-i18n="detail.description">${WJ.t('detail.description')}</h3>
+            <p>${WJ.getLocalized(p, 'description')}</p>
+          </div>
+
+          <div class="detail-actions">
+            <a class="btn btn-primary" href="https://wa.me/${WJ.CONTACT.phoneClean}?text=${inquiryText}" target="_blank" rel="noopener">
+              💬 <span data-i18n="detail.inquiryBtn">Send Inquiry to Wendy</span>
+            </a>
+            <a class="btn btn-outline" href="https://wa.me/${WJ.CONTACT.phoneClean}" target="_blank" rel="noopener" data-i18n="detail.inquiryWhatsApp">
+              WhatsApp
+            </a>
+          </div>
+
+          <div style="margin-top:24px;padding:16px;background:var(--bg-soft);border-radius:12px;border:1px solid var(--border);">
+            <strong style="color:var(--primary-dark);">📦 Factory &amp; Trading Advantage</strong>
+            <p style="margin:6px 0 0;font-size:13px;color:var(--text-soft);">
+              Want to order multiple SKUs? We combine <b>light goods (phone chains, bracelets)</b> with
+              <b>dense goods (rings, necklaces)</b> so your container hits max weight AND max volume —
+              lowest per-unit shipping cost possible. Message Wendy for a container plan!
+            </p>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Bind image swap
+    wrap.querySelectorAll('.thumb[data-img]').forEach(t => {
+      t.addEventListener('click', () => {
+        document.getElementById('mainImg').src = t.dataset.img;
+        wrap.querySelectorAll('.thumb').forEach(x => x.classList.remove('active'));
+        t.classList.add('active');
+        if (t.dataset.idx !== undefined) activeColorIdx = parseInt(t.dataset.idx, 10);
+        else activeColorIdx = -1;
+        // sync color swatches
+        wrap.querySelectorAll('.color-swatch').forEach((s, i) => {
+          s.classList.toggle('active', i === activeColorIdx);
+        });
+      });
+    });
+    // Bind color swatches
+    wrap.querySelectorAll('.color-swatch').forEach(s => {
+      s.addEventListener('click', () => {
+        const idx = parseInt(s.dataset.colorIdx, 10);
+        activeColorIdx = idx;
+        const img = colors[idx].image;
+        document.getElementById('mainImg').src = img;
+        wrap.querySelectorAll('.color-swatch').forEach(x => x.classList.remove('active'));
+        s.classList.add('active');
+        wrap.querySelectorAll('.thumb').forEach(t => {
+          const tidx = t.dataset.idx !== undefined ? parseInt(t.dataset.idx, 10) : -1;
+          t.classList.toggle('active', tidx === idx);
+        });
+      });
+    });
+  }
+
+  window.__pageInit = renderDetail;
+  window.__onLangChange = function () {
+    WJ.applyTranslations();
+    renderDetail();
+  };
+</script>
+</body>
+</html>
