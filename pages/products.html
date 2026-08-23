@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Products — Wendy Jewelry Catalog</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../assets/css/style.css" />
+</head>
+<body data-page="products">
+
+<div id="siteHeader"></div>
+
+<section class="page-header">
+  <div class="container">
+    <h1 data-i18n="products.title">Product Catalog</h1>
+    <p data-i18n="products.subtitle">Browse our full collection of fashion jewelry. All products include material & weight details plus multiple color options.</p>
+  </div>
+</section>
+
+<section class="section" style="padding-top:0;">
+  <div class="container">
+    <div class="products-toolbar">
+      <div class="search-box">
+        <input type="text" id="searchInput" data-i18n-placeholder="products.searchPlaceholder" placeholder="Search products..." />
+      </div>
+      <div class="category-filter" id="catFilter">
+        <button class="chip active" data-cat="all" data-i18n="products.filterAll">All</button>
+        <button class="chip" data-cat="phoneChain" data-i18n="nav.phoneChain">Phone Chains</button>
+        <button class="chip" data-cat="bracelet" data-i18n="nav.bracelet">Bracelets</button>
+        <button class="chip" data-cat="necklace" data-i18n="nav.necklace">Necklaces</button>
+        <button class="chip" data-cat="anklet" data-i18n="nav.anklet">Anklets</button>
+        <button class="chip" data-cat="ring" data-i18n="nav.ring">Rings</button>
+      </div>
+    </div>
+    <div class="products-grid" id="productsGrid"></div>
+    <div id="emptyState" class="empty-state" style="display:none;">No products found</div>
+  </div>
+</section>
+
+<div id="siteFooter"></div>
+
+<script src="../assets/js/app.js"></script>
+<script>
+  let currentCat = 'all';
+  let currentQuery = '';
+
+  function getURLParam(key) {
+    const p = new URLSearchParams(window.location.search);
+    return p.get(key) || '';
+  }
+
+  function renderProducts() {
+    const WJ = window.WJ;
+    let list = WJ.getActiveProducts();
+    if (currentCat !== 'all') list = list.filter(p => p.category === currentCat);
+    if (currentQuery.trim()) {
+      const q = currentQuery.trim().toLowerCase();
+      list = list.filter(p => {
+        const hay = [
+          p.name, p.nameAr || '', p.nameEs || '',
+          p.material, p.materialAr || '', p.materialEs || '',
+          p.category,
+          (p.colors || []).map(c => c.name).join(' ')
+        ].join(' ').toLowerCase();
+        return hay.includes(q);
+      });
+    }
+    const grid = document.getElementById('productsGrid');
+    const empty = document.getElementById('emptyState');
+    if (list.length === 0) {
+      grid.innerHTML = '';
+      empty.style.display = 'block';
+      empty.textContent = WJ.t('products.noProducts');
+      return;
+    }
+    empty.style.display = 'none';
+    grid.innerHTML = list.map(p => WJ.productCardHTML(p)).join('');
+  }
+
+  window.__pageInit = function () {
+    const WJ = window.WJ;
+    // URL ?cat=
+    const urlCat = getURLParam('cat');
+    if (urlCat && ['phoneChain','bracelet','necklace','anklet','ring'].includes(urlCat)) {
+      currentCat = urlCat;
+      document.querySelectorAll('#catFilter .chip').forEach(b => {
+        b.classList.toggle('active', b.dataset.cat === currentCat);
+      });
+    }
+
+    document.querySelectorAll('#catFilter .chip').forEach(b => {
+      b.addEventListener('click', () => {
+        document.querySelectorAll('#catFilter .chip').forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+        currentCat = b.dataset.cat;
+        renderProducts();
+      });
+    });
+
+    const input = document.getElementById('searchInput');
+    input.addEventListener('input', (e) => {
+      currentQuery = e.target.value;
+      renderProducts();
+    });
+
+    renderProducts();
+  };
+
+  window.__onLangChange = function () {
+    WJ.applyTranslations();
+    renderProducts();
+  };
+</script>
+</body>
+</html>
