@@ -471,32 +471,62 @@
     ];
   }
 
-  function loadProducts() {
-    const raw = localStorage.getItem(STORAGE_KEY_PRODUCTS);
-    if (!raw) {
-      const def = getDefaultProducts();
-      localStorage.setItem(STORAGE_KEY_PRODUCTS, JSON.stringify(def));
-      return def;
-    }
+  /* ---------------- Data access (cloud API + cache) ---------------- */
+  let _productsCache = null;
+  let _adminPwd = '';
+
+  function apiBase() {
+    return '/api/'; // 绝对路径，部署后所有页面通用
+  }
+
+  async function fetchProducts() {
     try {
-      return JSON.parse(raw);
-    } catch {
-      const def = getDefaultProducts();
-      localStorage.setItem(STORAGE_KEY_PRODUCTS, JSON.stringify(def));
-      return def;
+      const r = await fetch(apiBase() + 'products', { headers: { Accept: 'application/json' } });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const data = await r.json();
+      if (Array.isArray(data)) return data;
+      throw new Error('Invalid response');
+    } catch (e) {
+      // API 不可用（本地 file:// 或离线）时回退到默认产品
+      return getDefaultProducts();
     }
   }
 
-  function saveProducts(list) {
-    localStorage.setItem(STORAGE_KEY_PRODUCTS, JSON.stringify(list));
+  async function loadProducts(force) {
+    if (_productsCache && !force) return _productsCache;
+    _productsCache = await fetchProducts();
+    return _productsCache;
   }
 
-  function getActiveProducts() {
-    return loadProducts().filter((p) => p.active);
+  async function getActiveProducts() {
+    const list = await loadProducts();
+    return list.filter((p) => p.active);
   }
 
-  function getProductById(id) {
-    return loadProducts().find((p) => p.id === id);
+  async function getProductById(id) {
+    const list = await loadProducts();
+    return list.find((p) => p.id === id);
+  }
+
+  // 兼容旧调用：整体替换（内部转 admin API）
+  async function saveProducts(list) {
+    const r = await adminApi({ action: 'replace', products: list });
+    _productsCache = list.slice();
+    return r;
+  }
+
+  /* 后台 API：增删改（密码验证在后端环境变量） */
+  async function adminApi(body) {
+    const r = await fetch(apiBase() + 'admin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!r.ok) {
+      const e = await r.json().catch(() => ({}));
+      throw new Error(e.error || ('HTTP ' + r.status));
+    }
+    return r.json();
   }
 
   /* ---------------- Navigation & header rendering ---------------- */
@@ -685,7 +715,17 @@
   function adminLoggedIn() {
     return sessionStorage.getItem('wj_admin') === '1';
   }
-  function adminLogin(pwd) { return pwd === ADMIN_PASSWORD; }
+  async function adminLogin(pwd) {
+    try {
+      _adminPwd = pwd;
+      await adminApi({ action: 'list', password: pwd });
+      return true;
+    } catch (e) {
+      _adminPwd = '';
+      return false;
+    }
+  }
+  function getAdminPwd() { return _adminPwd; }
   function adminLogout() { sessionStorage.removeItem('wj_admin'); }
 
   /* ---------------- Init ---------------- */
@@ -708,6 +748,7 @@
     CONTACT, CATEGORIES, LANGS, ADMIN_PASSWORD,
     t, setLang, getLocalized,
     loadProducts, saveProducts, getActiveProducts, getProductById, uid,
+    adminApi, getAdminPwd,
     renderHeader, renderFooter, applyTranslations,
     productCardHTML, toast, getBasePath,
     adminLoggedIn, adminLogin, adminLogout
