@@ -186,19 +186,19 @@
       loginView.style.display = 'block';
       panelView.style.display = 'none';
     }
-    function showPanel() {
+    async function showPanel() {
       loginView.style.display = 'none';
       panelView.style.display = 'block';
-      renderProductList();
+      await renderProductList();
       renderColorsEditor([]);
     }
 
-    document.getElementById('loginForm').addEventListener('submit', (e) => {
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const pwd = document.getElementById('pwdInput').value;
-      if (WJ.adminLogin(pwd)) {
+      if (await WJ.adminLogin(pwd)) {
         sessionStorage.setItem('wj_admin', '1');
-        showPanel();
+        await showPanel();
       } else {
         document.getElementById('loginError').classList.add('show');
       }
@@ -213,8 +213,8 @@
     if (WJ.adminLoggedIn()) showPanel(); else showLogin();
 
     /* ---------- Product List ---------- */
-    function renderProductList() {
-      const list = WJ.loadProducts();
+    async function renderProductList() {
+      const list = await WJ.loadProducts();
       const tbody = document.getElementById('productListBody');
       document.getElementById('productCount').textContent = `(${list.length})`;
       if (!list.length) {
@@ -254,22 +254,25 @@
       });
     }
 
-    function toggleActive(id) {
-      const list = WJ.loadProducts();
-      const idx = list.findIndex(p => p.id === id);
-      if (idx === -1) return;
-      list[idx].active = !list[idx].active;
-      WJ.saveProducts(list);
-      renderProductList();
-      WJ.toast(WJ.t('admin.saveSuccess'));
+    async function toggleActive(id) {
+      try {
+        await WJ.adminApi({ action: 'toggle', id, password: WJ.getAdminPwd() });
+        await renderProductList();
+        WJ.toast(WJ.t('admin.saveSuccess'));
+      } catch (e) {
+        WJ.toast('Error: ' + e.message);
+      }
     }
 
-    function deleteProduct(id) {
+    async function deleteProduct(id) {
       if (!confirm(WJ.t('admin.confirmDelete'))) return;
-      const list = WJ.loadProducts().filter(p => p.id !== id);
-      WJ.saveProducts(list);
-      renderProductList();
-      WJ.toast(WJ.t('admin.deleteSuccess'));
+      try {
+        await WJ.adminApi({ action: 'delete', id, password: WJ.getAdminPwd() });
+        await renderProductList();
+        WJ.toast(WJ.t('admin.deleteSuccess'));
+      } catch (e) {
+        WJ.toast('Error: ' + e.message);
+      }
     }
 
     /* ---------- Colors Editor ---------- */
@@ -362,8 +365,8 @@
       document.getElementById('productForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
-    function editProduct(id) {
-      const p = WJ.getProductById(id);
+    async function editProduct(id) {
+      const p = await WJ.getProductById(id);
       if (!p) return;
       fillForm(p);
       document.querySelector('.admin-form-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -371,7 +374,7 @@
 
     document.getElementById('resetBtn').addEventListener('click', resetForm);
 
-    document.getElementById('productForm').addEventListener('submit', (e) => {
+    document.getElementById('productForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const data = readForm();
       if (!data.name || !data.material || !data.weight) {
@@ -381,18 +384,19 @@
       if (!data.image) {
         if (!confirm('Main image URL is empty — save anyway? (product will show a placeholder)')) return;
       }
-      const list = WJ.loadProducts();
-      if (data.id) {
-        const idx = list.findIndex(p => p.id === data.id);
-        if (idx !== -1) list[idx] = Object.assign({}, list[idx], data);
-      } else {
-        data.id = WJ.uid();
-        list.unshift(data);
+      try {
+        const pwd = WJ.getAdminPwd();
+        if (data.id) {
+          await WJ.adminApi({ action: 'update', product: data, password: pwd });
+        } else {
+          await WJ.adminApi({ action: 'add', product: data, password: pwd });
+        }
+        resetForm();
+        await renderProductList();
+        WJ.toast(WJ.t('admin.saveSuccess'));
+      } catch (e) {
+        WJ.toast('Error: ' + e.message);
       }
-      WJ.saveProducts(list);
-      resetForm();
-      renderProductList();
-      WJ.toast(WJ.t('admin.saveSuccess'));
     });
 
     // Re-render on lang change
