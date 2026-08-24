@@ -52,9 +52,9 @@
     return p.get(key) || '';
   }
 
-  function renderProducts() {
+  async function renderProducts() {
     const WJ = window.WJ;
-    let list = WJ.getActiveProducts();
+    let list = await WJ.getActiveProducts();
     if (currentCat !== 'all') list = list.filter(p => p.category === currentCat);
     if (currentQuery.trim()) {
       const q = currentQuery.trim().toLowerCase();
