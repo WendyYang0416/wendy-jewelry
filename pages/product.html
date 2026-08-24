@@ -30,10 +30,10 @@
 
   function getURLParam(k) { return (new URLSearchParams(window.location.search)).get(k) || ''; }
 
-  function renderDetail() {
+  async function renderDetail() {
     const WJ = window.WJ;
     const id = getURLParam('id');
-    const p = WJ.getProductById(id);
+    const p = await WJ.getProductById(id);
     const wrap = document.getElementById('detailContent');
 
     if (!p || !p.active) {
