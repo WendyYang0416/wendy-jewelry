@@ -218,9 +218,11 @@
     // Featured: first 8 active products
     const fgrid = document.getElementById('featuredGrid');
     if (fgrid) {
-      const prods = WJ.getActiveProducts().slice(0, 8);
-      fgrid.innerHTML = prods.map(p => WJ.productCardHTML(p)).join('') ||
-        `<div class="empty-state">${WJ.t('products.noProducts')}</div>`;
+      (async () => {
+        const prods = (await WJ.getActiveProducts()).slice(0, 8);
+        fgrid.innerHTML = prods.map(p => WJ.productCardHTML(p)).join('') ||
+          `<div class="empty-state">${WJ.t('products.noProducts')}</div>`;
+      })();
     }
   };
 
